@@ -75,6 +75,7 @@ impl Story {
             items.push(item);
         }
 
+        items.reverse(); // put latest chapter at start of feed
         items
     }
 
