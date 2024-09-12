@@ -21,8 +21,8 @@ pub fn handle_feed_request(config: &Config, reading_id: ReadingId) -> rouille::R
     // Generate RSS feed
     let channel: Channel = ChannelBuilder::default()
         .title(&story.title)
-        .description(format!("frequency: {}, id: {}", reading.frequency, reading.id))
-        .items(story.get_rss_items(reading.current_chapter))
+        .description(format!("frequency: {}, {} chapters per update, id: {}", reading.frequency, reading.chapters_per_update, reading.id)) //todo get desc from function reading.get_desc()
+        .items(story.get_rss_items(reading.current_chapter, reading.start_chapter))
         .build();
 
     // return response

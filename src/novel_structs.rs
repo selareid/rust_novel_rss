@@ -58,25 +58,30 @@ impl Story {
         self.url.replace("%s", &format!("{:0width$}", chapter, width=self.leading_zeros))
     }
 
-    pub(crate) fn get_rss_items(&self, max_chapter: u64) -> Vec<rss::Item> {
+    pub(crate) fn get_rss_items(&self, max_chapter: u64, start_chapter: u64) -> Vec<rss::Item> {
         let mut items: Vec<rss::Item> = Vec::new();
 
-        // todo - remove hard coded orv stuff
-        // this one adds intro to the feed
-        if self.id == "orv" {
-            let intro_item: Item = ItemBuilder::default()
-                .title("Omniscient Reader Viewpoint Intro".to_string())
-                .link("http://read.selareid.moe/stories/omniscient_readers_viewpoint/intro.xhtml".to_string())
-                .build();
-            items.push(intro_item);
-        }
+        for chapter_i in start_chapter..max_chapter+1 {
+            let item: Item;
 
-        for chapter_i in 1..max_chapter+1 {
-            let item: Item = ItemBuilder::default()
-                .title(format!("{} Chapter {}", self.title, chapter_i))
-                .link(self.get_chapter_url(chapter_i))
-                .build();
-
+            if chapter_i == 0 {
+                // todo - remove hard coded orv stuff
+                // this one adds intro to the feed
+                if self.id == "orv" {
+                    item = ItemBuilder::default()
+                        .title("Omniscient Reader Viewpoint Intro".to_string())
+                        .link("http://read.selareid.moe/stories/omniscient_readers_viewpoint/intro.xhtml".to_string())
+                        .build();
+                } else {
+                    todo!("need to implement intro chapter item creation without hardcoding");
+                }
+            }
+            else {
+                item = ItemBuilder::default()
+                    .title(format!("{} Chapter {}", self.title, chapter_i))
+                    .link(self.get_chapter_url(chapter_i))
+                    .build();
+            }
             items.push(item);
         }
 
@@ -121,8 +126,10 @@ pub(crate) struct Reading {
     pub(crate) id: ReadingId,
     pub(crate) story_id: String,
     pub(crate) frequency: u64,
+    pub(crate) start_chapter: u64,
     pub(crate) current_chapter: u64,
-    last_update: u64
+    last_update: u64,
+    pub(crate) chapters_per_update: u64,
 }
 
 impl Reading {
@@ -131,7 +138,7 @@ impl Reading {
     }
 
     pub(crate) fn increment_current_chapter(&mut self, path_to_readings: &String) {
-        self.current_chapter += 1;
+        self.current_chapter += self.chapters_per_update;
         self.last_update = get_days_since_epoch();
         self.update_reading_on_disk(&path_to_readings);
     }
@@ -149,8 +156,10 @@ impl Reading {
                 if desired_reading_id == current_reading_id {
                     let story_id = sections.next().unwrap();
                     let frequency = sections.next().unwrap();
+                    let chapters_per_update = sections.next().unwrap();
                     let current_chapter = sections.next().unwrap();
                     let last_update = sections.next().unwrap();
+                    let start_chapter = sections.next().unwrap_or("0");
 
                     assert!(matches!(sections.next(), None));
 
@@ -158,8 +167,10 @@ impl Reading {
                         id: current_reading_id.to_string(),
                         story_id: story_id.to_string(),
                         frequency: frequency.parse().unwrap(),
+                        chapters_per_update: chapters_per_update.parse().unwrap(),
                         current_chapter: current_chapter.parse().unwrap(),
                         last_update: last_update.parse().unwrap(),
+                        start_chapter: start_chapter.parse().unwrap(),
                     })
                 }
             }
@@ -179,7 +190,7 @@ impl Reading {
             if let Some(current_reading_id) = sections.next() {
                 if self.id == current_reading_id { // we have the current story
                     if !firstline { readings_file_string.push_str("\n"); }
-                    readings_file_string.push_str(&format!("{} {} {} {} {}", self.id, self.story_id, self.frequency, self.current_chapter, self.last_update));
+                    readings_file_string.push_str(&format!("{} {} {} {} {} {} {}", self.id, self.story_id, self.frequency, self.chapters_per_update, self.current_chapter, self.last_update, self.start_chapter));
 
                     continue;
                 }
