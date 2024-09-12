@@ -1,10 +1,15 @@
 use rss::{Channel, ChannelBuilder};
-use rouille::Response;
 use crate::novel_structs::{Config, Story, Reading, ReadingId};
 
 // todo - make more resilient to errors (using a lot of unwrap atm)
-pub fn handle_feed_request(config: &Config, reading_id: ReadingId) -> Response {
-    let mut reading: Reading = Reading::get_reading(&config.get_path_to_readings(), reading_id).unwrap();
+pub fn handle_feed_request(config: &Config, reading_id: ReadingId) -> rouille::Response {
+
+    let reading = Reading::get_reading(&config.get_path_to_readings(), reading_id);
+    let mut reading: Reading = match reading {
+        Ok(r) => r,
+        Err(e) => return e,
+    };
+
     let story: Story = Story::get_story(&config.get_path_to_stories(), &reading.story_id).unwrap();
 
     println!("{:?}", reading);
@@ -21,5 +26,5 @@ pub fn handle_feed_request(config: &Config, reading_id: ReadingId) -> Response {
         .build();
 
     // return response
-    Response::text(channel.to_string())
+    rouille::Response::text(channel.to_string())
 }

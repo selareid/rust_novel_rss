@@ -9,14 +9,19 @@ fn get_days_since_epoch() -> u64 {
 }
 
 pub(crate) struct Config {
+    port: String,
     directory: String,
     filename_readings: String,
     filename_stories: String
 }
 
 impl Config {
-    pub(crate) fn new(directory: String, filename_readings: String, filename_stories: String) -> Self {
-        Config { directory, filename_readings, filename_stories }
+    pub(crate) fn new(port: String, directory: String, filename_readings: String, filename_stories: String) -> Self {
+        Config { port, directory, filename_readings, filename_stories }
+    }
+
+    pub(crate) fn web_addr(&self) -> String {
+        format!("0.0.0.0:{}", self.port)
     }
 
     pub(crate) fn get_path_to_readings(&self) -> String {
@@ -131,8 +136,13 @@ impl Reading {
         self.update_reading_on_disk(&path_to_readings);
     }
 
-    pub(crate) fn get_reading(readings_path: &String, desired_reading_id: ReadingId) -> Result<Self, Box<dyn std::error::Error>> {
-        for line in fs::read_to_string(readings_path)?.lines() {
+    pub(crate) fn get_reading(readings_path: &String, desired_reading_id: ReadingId) -> Result<Self, rouille::Response> {
+        let file = match fs::read_to_string(readings_path) {
+            Ok(data) => data,
+            Err(e) => return Err(rouille::Response::text(e.to_string()).with_status_code(500))
+        };
+
+        for line in file.lines() {
             let mut sections = line.split_whitespace();
 
             if let Some(current_reading_id) = sections.next() {
@@ -147,16 +157,16 @@ impl Reading {
                     return Ok(Reading {
                         id: current_reading_id.to_string(),
                         story_id: story_id.to_string(),
-                        frequency: frequency.parse()?,
-                        current_chapter: current_chapter.parse()?,
-                        last_update: last_update.parse()?,
+                        frequency: frequency.parse().unwrap(),
+                        current_chapter: current_chapter.parse().unwrap(),
+                        last_update: last_update.parse().unwrap(),
                     })
                 }
             }
             else { panic!("Issue with readings file. Could not get reading id"); }
         }
 
-        Err(Box::from(format!("Failed to find reading with id {}", desired_reading_id)))
+        Err(rouille::Response::text("Error 404").with_status_code(404))
     }
 
     fn update_reading_on_disk(&self, path: &String) {
