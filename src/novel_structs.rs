@@ -35,7 +35,7 @@ impl Config {
 
 #[derive(Debug)]
 pub(crate) struct Story {
-    id: String,
+    _id: String,
     pub(crate) title: String,
     url: String, // e.g. example.com/orv/chap_0000%s.xhtml where %s is num
     leading_zeros: usize,
@@ -90,7 +90,7 @@ impl Story {
     }
 
     pub(crate) fn _new(id: String, title: String, url: String, leading_zeros: usize, chapter_zero_url: Option<String>) -> Self {
-        Story { id: id, title, url, leading_zeros, chapter_zero_url }
+        Story { _id: id, title, url, leading_zeros, chapter_zero_url }
     }
 
     pub(crate) fn get_story(stories_path: &String, desired_story_id: &String) -> Result<Self, Box<dyn std::error::Error>> {
@@ -108,7 +108,7 @@ impl Story {
                     assert!(matches!(sections.next(), None));
 
                     return Ok(Story {
-                        id: desired_story_id.to_string(),
+                        _id: desired_story_id.to_string(),
                         title: title.to_string(),
                         url: url.to_string(),
                         leading_zeros: leading_zeros.parse()?,
