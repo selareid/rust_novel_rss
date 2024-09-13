@@ -184,24 +184,20 @@ impl Reading {
 
     fn update_reading_on_disk(&self, path: &String) {
         let mut readings_file_string = String::new();
-        let mut firstline = true;
 
         for line in fs::read_to_string(&path).unwrap().lines() {
             let mut sections = line.split_whitespace();
 
-            if let Some(current_reading_id) = sections.next() {
-                if self.id == current_reading_id { // we have the current story
-                    if !firstline { readings_file_string.push_str("\n"); }
-                    readings_file_string.push_str(&format!("{} {} {} {} {} {} {}", self.id, self.story_id, self.frequency, self.chapters_per_update, self.current_chapter, self.last_update, self.start_chapter));
+            let current_reading_matches = sections.next().filter(|id| id.to_string() == self.id).is_some();
 
-                    continue;
-                }
+            if current_reading_matches { // we have the current story
+                readings_file_string.push_str(&format!("{} {} {} {} {} {} {}", self.id, self.story_id, self.frequency, self.chapters_per_update, self.current_chapter, self.last_update, self.start_chapter));
+            }
+            else {
+                readings_file_string.push_str(line);
             }
 
-            if !firstline { readings_file_string.push_str("\n"); }
-            readings_file_string.push_str(line);
-
-            firstline = false;
+            if !line.is_empty() { readings_file_string.push_str("\n"); }
         }
 
         fs::write(&path, readings_file_string).unwrap();
