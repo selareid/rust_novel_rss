@@ -161,7 +161,7 @@ impl Reading {
                     let chapters_per_update = sections.next().unwrap();
                     let current_chapter = sections.next().unwrap();
                     let last_update = sections.next().unwrap();
-                    let start_chapter = sections.next().unwrap_or("0");
+                    let start_chapter = sections.next().unwrap_or("1");
 
                     assert!(matches!(sections.next(), None));
 
