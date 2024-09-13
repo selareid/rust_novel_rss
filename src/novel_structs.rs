@@ -38,7 +38,8 @@ pub(crate) struct Story {
     id: String,
     pub(crate) title: String,
     url: String, // e.g. example.com/orv/chap_0000%s.xhtml where %s is num
-    leading_zeros: usize
+    leading_zeros: usize,
+    chapter_zero_url: Option<String>, // url of intro/prologue chapter "0"
 }
 
 impl Story {
@@ -65,15 +66,14 @@ impl Story {
             let item: Item;
 
             if chapter_i == 0 {
-                // todo - remove hard coded orv stuff
-                // this one adds intro to the feed
-                if self.id == "orv" {
-                    item = ItemBuilder::default()
-                        .title("Omniscient Reader Viewpoint Intro".to_string())
-                        .link("http://read.selareid.moe/stories/omniscient_readers_viewpoint/intro.xhtml".to_string())
-                        .build();
-                } else {
-                    todo!("need to implement intro chapter item creation without hardcoding");
+                match &self.chapter_zero_url {
+                    None => {panic!("No zero chapter url found, but zero chapter was requested!")}
+                    Some(url) => {
+                        item = ItemBuilder::default()
+                            .title(format!("{} Chapter {}", self.title, chapter_i))
+                            .link(url.to_string())
+                            .build();
+                    }
                 }
             }
             else {
@@ -89,8 +89,8 @@ impl Story {
         items
     }
 
-    pub(crate) fn _new(id: String, title: String, url: String, leading_zeros: usize) -> Self {
-        Story {id, title, url, leading_zeros }
+    pub(crate) fn _new(id: String, title: String, url: String, leading_zeros: usize, chapter_zero_url: Option<String>) -> Self {
+        Story { id: id, title, url, leading_zeros, chapter_zero_url }
     }
 
     pub(crate) fn get_story(stories_path: &String, desired_story_id: &String) -> Result<Self, Box<dyn std::error::Error>> {
@@ -103,6 +103,7 @@ impl Story {
                     let title = sections.next().unwrap();
                     let url = sections.next().unwrap();
                     let leading_zeros = sections.next().unwrap();
+                    let chapter_zero_url = sections.next();
 
                     assert!(matches!(sections.next(), None));
 
@@ -110,7 +111,8 @@ impl Story {
                         id: desired_story_id.to_string(),
                         title: title.to_string(),
                         url: url.to_string(),
-                        leading_zeros: leading_zeros.parse()?
+                        leading_zeros: leading_zeros.parse()?,
+                        chapter_zero_url: chapter_zero_url.filter(|s| s.len() >= 5).map(|s| s.to_string()), // minimal string length for url to be accepted
                     })
                 }
             } else { panic!("Issue with stories file. Could not get story id."); }
